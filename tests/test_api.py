@@ -1,23 +1,27 @@
 import json
-from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
+import src.storage as storage
 from src.main import app
 
 client = TestClient(app)
 
-DATA_FILE = Path(__file__).parent.parent / "src" / "data.json"
 
+@pytest.fixture(autouse=True)
+def use_temp_data_file(tmp_path, monkeypatch):
+    """
+    Create a temporary data.json file for each test.
+    This prevents tests from modifying the real data.json.
+    """
+    data_file = tmp_path / "data.json"
+    data_file.write_text("[]", encoding="utf-8")
 
-def reset_data():
-    with open(DATA_FILE, "w") as file:
-        json.dump([], file)
+    monkeypatch.setattr(storage, "DATA_FILE", data_file)
 
 
 def test_add_expense():
-    reset_data()
-
     response = client.post(
         "/expenses",
         json={
@@ -33,8 +37,6 @@ def test_add_expense():
 
 
 def test_get_expenses():
-    reset_data()
-
     client.post(
         "/expenses",
         json={
@@ -52,8 +54,6 @@ def test_get_expenses():
 
 
 def test_filter_by_category():
-    reset_data()
-
     client.post(
         "/expenses",
         json={
@@ -71,8 +71,6 @@ def test_filter_by_category():
 
 
 def test_total_expenses():
-    reset_data()
-
     client.post(
         "/expenses",
         json={
@@ -90,8 +88,6 @@ def test_total_expenses():
 
 
 def test_delete_expense():
-    reset_data()
-
     client.post(
         "/expenses",
         json={
@@ -105,3 +101,23 @@ def test_delete_expense():
     response = client.delete("/expenses/1")
 
     assert response.status_code == 200
+
+
+def test_reject_negative_amount():
+    response = client.post(
+        "/expenses",
+        json={
+            "title": "Invalid",
+            "amount": -10,
+            "category": "Food",
+            "date": "2026-08-02"
+        }
+    )
+
+    assert response.status_code == 422
+
+
+def test_delete_nonexistent_expense():
+    response = client.delete("/expenses/999")
+
+    assert response.status_code == 404
