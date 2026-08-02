@@ -37,7 +37,7 @@ expense-tracker-api/
 Clone the repository:
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone https://github.com/CodesbyHim/Expense-Tracker-API.git
 cd expense-tracker-api
 ```
 
